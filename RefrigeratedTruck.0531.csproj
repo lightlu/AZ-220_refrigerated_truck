@@ -6,4 +6,12 @@
     <RootNamespace>RefrigeratedTruck._0531</RootNamespace>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="AzureMapsRestToolkit" Version="6.0.0" />
+    <PackageReference Include="Microsoft.Azure.Devices.Client" Version="1.37.2" />
+    <PackageReference Include="Microsoft.Azure.Devices.Provisioning.Client" Version="1.17.1" />
+    <PackageReference Include="Microsoft.Azure.Devices.Provisioning.Transport.Mqtt" Version="1.15.1" />
+    <PackageReference Include="System.Text.Json" Version="5.0.2" />
+  </ItemGroup>
+
 </Project>

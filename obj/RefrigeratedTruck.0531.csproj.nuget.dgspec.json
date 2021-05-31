@@ -37,6 +37,28 @@
       "frameworks": {
         "net5.0": {
           "targetAlias": "net5.0",
+          "dependencies": {
+            "AzureMapsRestToolkit": {
+              "target": "Package",
+              "version": "[6.0.0, )"
+            },
+            "Microsoft.Azure.Devices.Client": {
+              "target": "Package",
+              "version": "[1.37.2, )"
+            },
+            "Microsoft.Azure.Devices.Provisioning.Client": {
+              "target": "Package",
+              "version": "[1.17.1, )"
+            },
+            "Microsoft.Azure.Devices.Provisioning.Transport.Mqtt": {
+              "target": "Package",
+              "version": "[1.15.1, )"
+            },
+            "System.Text.Json": {
+              "target": "Package",
+              "version": "[5.0.2, )"
+            }
+          },
           "imports": [
             "net461",
             "net462",
