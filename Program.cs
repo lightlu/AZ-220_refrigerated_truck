@@ -119,10 +119,10 @@ namespace refrigerated_truck
         static TwinCollection reportedProperties = new TwinCollection();
 
         // User IDs.
-        static string ScopeID = "<your Scope ID>";
-        static string DeviceID = "<your Device ID>";
-        static string PrimaryKey = "<your device Primary Key>";
-        static string AzureMapsKey = "<your Azure Maps Subscription Key>";
+        static string ScopeID = "0ne002B7B53";
+        static string DeviceID = "RefrigeratedTruck1";
+        static string PrimaryKey = "EqnsRtACd6SthkkrGkSQlYkF6RLQLZarYCptmCZ/TG0=";
+        static string AzureMapsKey = "k7n6jLNqpwOyZuvXoD5pHgE8zUXGtIcI5ILNY1lJNzU";
 
         static double Degrees2Radians(double deg)
         {
