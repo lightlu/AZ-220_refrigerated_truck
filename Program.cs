@@ -9,6 +9,8 @@ using Microsoft.Azure.Devices.Provisioning.Client;
 using Microsoft.Azure.Devices.Provisioning.Client.Transport;
 using AzureMapsToolkit;
 using AzureMapsToolkit.Common;
+using uPLibrary.Networking.M2Mqtt;  //for MQTT subscribe
+using uPLibrary.Networking.M2Mqtt.Messages;  //for MQTT subscribe
 
 namespace refrigerated_truck
 {
@@ -672,11 +674,98 @@ namespace refrigerated_truck
         };
     }
 
+#region LaunchMQTT
+	    static MqttClient EdgeXAIclient;
+	    static string AIData = "";
+	    static string MqttBrokerIP = "127.0.0.1";
+	    static string[] MqttTopic = { "MQTTExport" };
+	    static string MQTTClientID;
+	    static byte[] MqttQos = { MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE };
+	    static string[] SupportItem = { "apple", "banana", "fork", "spoon" };
+	    static void EdgeXAIclient_MqttMsgPublishReceived(object sender, MqttMsgPublishEventArgs e) {
+		    try {
+			    // logs("EdgeXAIclient_MqttMsgPublishReceived");
+			    if(e.Topic == MqttTopic[0]) {
+				    // logs("Received MQTT topic " + MqttTopic[0]);
+				    var strJSON = Encoding.UTF8.GetString(e.Message);
+				    if (strJSON.Contains("MQTTAnalyticservice")) {
+
+					    // logs("MQTT received topic : " + e.Topic.ToString());
+					    // logs("--------------------------------------------------------");
+					    // logs(strJSON);
+					    // logs("--------------------------------------------------------");
+
+					    // gEdgeXAIObj = JsonConvert.DeserializeObject<EdgeXAIObj>(strJSON);
+
+					    // if (gEdgeXAIObj.Readings[0].Value.Contains("objects")) {
+					    // 	    var tmp = gEdgeXAIObj.Readings[0].Value.Replace('\"', '"');
+					    // 	    var objtmp = JsonConvert.DeserializeObject<cAIValue>(tmp);
+					    // 	    var detect_obj = objtmp.Objects[0].Roi_type;
+
+					    // 	    foreach(string item in SupportItem) {
+					    // 		    if(item == detect_obj) {
+					    // 			    if (AIData != detect_obj) {
+					    // 				    tbAIResult.Text = detect_obj;
+					    // 				    tbAIResult.BackColor = Color.White;
+					    // 				    LoadPicture(detect_obj);
+					    // 				    AIData = detect_obj;
+					    // 			    }
+					    // 			    // else {logs("AI has same result don't redraw");}
+					    // 		    }
+					    // 		    // else {logs("We don't support this item, ignore it");}
+					    // 	    }
+					    // }
+					    // else {logs(" SMS data, skip it.");}
+				    }
+				    // else {logs("useless data skip it.");}
+			    }
+			    // else {logs("shouldn't be here!!!");}
+			    /*
+			      tbStatusReport.Text = "ID : " + gEdgeXAIObj[0].ID + "\r\n" +
+			      "Created : " + gEdgeXAIObj[0].Created.ToString() + "\r\n" +
+			      "Origin : " + gEdgeXAIObj[0].Origin.ToString() + "\r\n" +
+			      "Modified : " + gEdgeXAIObj[0].Modified.ToString() + "\r\n" +
+			      "Device : " + gEdgeXAIObj[0].Device + "\r\n" +
+			      "Name : " + gEdgeXAIObj[0].Name + "\r\n" +
+			      "Value : " + gEdgeXAIObj[0].Value;
+			      //"Value : " + gEdgeXAIObj[0].Value.Objects[0].Roi_type;
+			      */
+		    }
+		    catch (Exception ex) {
+			    // logs("=============Exception Occurs Start============= ");
+			    // logs(ex.ToString());
+			    // logs("==============Exception Occurs End============== ");
+			    return;
+		    }
+	    }
+
+	    static void LaunchMQTT() {
+		    try {
+			    // logs("LaunchMQTT");
+			    EdgeXAIclient = new MqttClient(MqttBrokerIP);
+			    //EdgeXAIclient = new MqttClient(IPAddress.Parse("127.0.0.1"));
+			    EdgeXAIclient.MqttMsgPublishReceived += EdgeXAIclient_MqttMsgPublishReceived;
+			    MQTTClientID = Guid.NewGuid().ToString();
+			    EdgeXAIclient.Connect(MQTTClientID);
+			    EdgeXAIclient.Subscribe(MqttTopic, MqttQos);
+		    }
+		    catch (Exception ex) {
+			    // logs("=============Exception Occurs Start============= ");
+			    // logs(ex.ToString());
+			    // logs("==============Exception Occurs End============== ");
+			    return;
+		    }
+	    }
+#endregion
+
         static void Main(string[] args)
         {
 
             rand = new Random();
             colorMessage($"Starting {truckIdentification}", ConsoleColor.Yellow);
+
+	    LaunchMQTT();
+
             currentLat = baseLat;
             currentLon = baseLon;
 
