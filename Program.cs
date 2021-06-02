@@ -106,6 +106,24 @@ namespace refrigerated_truck
             {47.544120, -122.221673 }
         };
 
+	// Gene Coulon Park
+	static double[,] routeCustomer7 = new double[,]
+	{
+		{47.639125559793534, -122.1357198427834},
+		{47.63666517962163, -122.14304},
+		{47.629693778092395, -122.15396510832448},
+		{47.62995688097588, -122.16986238927277},
+		{47.63204395080198, -122.18538505027742},
+		{47.627275040434746, -122.18887739060114},
+		{47.616484826042985, -122.1889637743807},
+		{47.60593955580794, -122.18666113967859},
+		{47.59597402791651, -122.18160013281326},
+		{47.58552618289185, -122.17841024241707},
+		{47.57535496379873, -122.17544442405745},
+		{47.56630478119958, -122.18315230622487},
+		{47.55709680293006, -122.19015361611747}
+	};
+
         static double[,] path;                          // Lat/lon steps for the route.
         static double[] timeOnPath;                     // Time in seconds for each section of the route.
         static int truckOnSection;                      // The current path section the truck is on.
@@ -165,7 +183,17 @@ namespace refrigerated_truck
             // Find how far along the section the truck has moved.
             currentLat = path[truckOnSection, 0] + remainderFraction * (path[truckOnSection + 1, 0] - path[truckOnSection, 0]);
             currentLon = path[truckOnSection, 1] + remainderFraction * (path[truckOnSection + 1, 1] - path[truckOnSection, 1]);
+	    greenMessage($"UpdatePosition() currentLat,currentLon = {currentLat},{currentLon}");
         }
+	    private static int update_position_index = 0;
+	    static void UpdatePositionLocal()
+		    {
+
+			    currentLat = path[update_position_index, 0];
+			    currentLon = path[update_position_index, 1];
+			    update_position_index++;
+			    greenMessage($"UpdatePositionLocal() {update_position_index} currentLat,currentLon = {currentLat},{currentLon}");
+		    }
 
         static void GetRoute(StateEnum newState)
         {
@@ -241,6 +269,68 @@ namespace refrigerated_truck
             }
         }
 
+	    static void GetRouteLocal(StateEnum newState)
+	    {
+		    greenMessage($"newState={newState}");
+		    // Set the state to ready, until the new route arrives.
+		    state = StateEnum.ready;
+		    int nPoints = routeCustomer7.Length / 2;
+		    greenMessage($"Use Local Route routeCustomer7. Number of points = {nPoints}");
+
+		    // Clear the path. Add two points for the start point and destination.
+		    path = new double[nPoints + 2, 2];
+		    int c = 0;
+
+		    // Start with the current location.
+		    path[c, 0] = currentLat;
+		    path[c, 1] = currentLon;
+		    greenMessage($"c={c} currentLat={currentLat} currentLon={currentLon} path[c, ]={path[c, 0]}, {path[c, 1]}");
+		    ++c;
+
+		    // Retrieve the route and push the points onto the array.
+		    for (var n = 0; n < nPoints; n++)
+		    {
+			    var x = routeCustomer7[n, 0];
+			    var y = routeCustomer7[n, 1];
+			    path[c, 0] = x;
+			    path[c, 1] = y;
+			    greenMessage($"c={c} path[{c}, ]={path[c, 0]}, {path[c, 1]}");
+			    ++c;
+		    }
+
+		    // Finish with the destination.
+		    destinationLat = path[c, 0];
+		    destinationLon = path[c, 1];
+
+		    // Store the path length and time taken, to calculate the average speed.
+		    var meters = DistanceInMeters(path[0, 0], path[0, 1], destinationLat, destinationLon);
+		    var seconds = 100;
+		    var pathSpeed = meters / seconds;
+
+		    double distanceApartInMeters;
+		    double timeForOneSection;
+
+		    // Clear the time on path array. The path array is 1 less than the points array.
+		    timeOnPath = new double[nPoints + 1];
+
+		    // Calculate how much time is required for each section of the path.
+		    for (var t = 0; t < nPoints + 1; t++)
+		    {
+			    // Calculate distance between the two path points, in meters.
+			    distanceApartInMeters = DistanceInMeters(path[t, 0], path[t, 1], path[t + 1, 0], path[t + 1, 1]);
+
+			    // Calculate the time for each section of the path.
+			    timeForOneSection = distanceApartInMeters / pathSpeed;
+			    timeOnPath[t] = timeForOneSection;
+		    }
+		    truckOnSection = 0;
+		    truckSectionsCompletedTime = 0;
+		    timeOnCurrentTask = 0;
+
+		    // Update the state now the route has arrived. One of: enroute or returning.
+		    state = newState;
+        }
+
     static Task<MethodResponse> CmdGoToCustomer(MethodRequest methodRequest, object userContext)
     {
         try
@@ -276,7 +366,7 @@ namespace refrigerated_truck
                             destinationLon = customer[customerNumber, 1];
 
                             // Find route from current position to destination, storing route.
-                            GetRoute(StateEnum.enroute);
+                            GetRouteLocal(StateEnum.enroute);
                         }
                         break;
                 }
@@ -480,7 +570,7 @@ namespace refrigerated_truck
             case StateEnum.enroute:
 
                 // Move the truck.
-                UpdatePosition();
+                UpdatePositionLocal();
 
                 // Check to see if the truck has arrived at the customer.
                 if (Arrived())
