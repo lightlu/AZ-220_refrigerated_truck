@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 using Microsoft.Azure.Devices.Client;
 using Microsoft.Azure.Devices.Shared;
 using Microsoft.Azure.Devices.Provisioning.Client;
@@ -11,9 +12,28 @@ using AzureMapsToolkit;
 using AzureMapsToolkit.Common;
 using uPLibrary.Networking.M2Mqtt;  //for MQTT subscribe
 using uPLibrary.Networking.M2Mqtt.Messages;  //for MQTT subscribe
+using Newtonsoft.Json; //for parser JSON format
+using Newtonsoft.Json.Linq;
 
 namespace refrigerated_truck
 {
+    public class cReadings
+    {
+        public string ID { get; set; }
+        public Int64 Origin { get; set; }
+        public string Device { get; set; }
+        public string Name { get; set; }
+        public string Value { get; set; }
+    }
+
+    public class EdgeXAIObj
+    {
+        public string ID { get; set; }
+        public string Device { get; set; }
+        public Int64 Origin { get; set; }
+        public List<cReadings> Readings { get; set; }
+    }
+
     class Program
     {
         enum StateEnum
@@ -73,6 +93,8 @@ namespace refrigerated_truck
 
         const string noEvent = "none";
         static string eventText = noEvent;              // Event text sent to IoT Central.
+
+	    static EdgeXAIObj gEdgeXAIObj;
 
         static double[,] customer = new double[,]
         {
@@ -626,7 +648,7 @@ namespace refrigerated_truck
                 Location = new { lon = currentLon, lat = currentLat },
                 Event = eventText,
             };
-            var telemetryMessageString = JsonSerializer.Serialize(telemetryDataPoint);
+            var telemetryMessageString = System.Text.Json.JsonSerializer.Serialize(telemetryDataPoint);
             var telemetryMessage = new Message(Encoding.ASCII.GetBytes(telemetryMessageString));
 
             // Clear the events, as the message has been sent.
@@ -649,7 +671,7 @@ namespace refrigerated_truck
     {
         reportedProperties["TruckID"] = truckIdentification;
         await s_deviceClient.UpdateReportedPropertiesAsync(reportedProperties);
-        greenMessage($"Sent device properties: {JsonSerializer.Serialize(reportedProperties)}");
+        greenMessage($"Sent device properties: {System.Text.Json.JsonSerializer.Serialize(reportedProperties)}");
     }
     static async Task HandleSettingChanged(TwinCollection desiredProperties, object userContext)
     {
@@ -678,26 +700,38 @@ namespace refrigerated_truck
 	    static MqttClient EdgeXAIclient;
 	    static string AIData = "";
 	    static string MqttBrokerIP = "127.0.0.1";
-	    static string[] MqttTopic = { "MQTTExport" };
+	    static string[] MqttTopic = { "edgex/messagebus" };
 	    static string MQTTClientID;
 	    static byte[] MqttQos = { MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE };
 	    static string[] SupportItem = { "apple", "banana", "fork", "spoon" };
+	    static double lat_lon_shift = 0.0, lat_lon_shift_unit = 0.01;
 	    static void EdgeXAIclient_MqttMsgPublishReceived(object sender, MqttMsgPublishEventArgs e) {
 		    try {
-			    // logs("EdgeXAIclient_MqttMsgPublishReceived");
-			    if(e.Topic == MqttTopic[0]) {
+			    greenMessage("EdgeXAIclient_MqttMsgPublishReceived");
+			    greenMessage($"{e.Topic}");
+			    var strJSON = Encoding.UTF8.GetString(e.Message);
+			    greenMessage($"{strJSON}");
+			    // if(e.Topic == MqttTopic[0]) {
 				    // logs("Received MQTT topic " + MqttTopic[0]);
-				    var strJSON = Encoding.UTF8.GetString(e.Message);
-				    if (strJSON.Contains("MQTTAnalyticservice")) {
+				    // if (strJSON.Contains("MQTTAnalyticservice")) {
 
 					    // logs("MQTT received topic : " + e.Topic.ToString());
 					    // logs("--------------------------------------------------------");
 					    // logs(strJSON);
 					    // logs("--------------------------------------------------------");
 
-					    // gEdgeXAIObj = JsonConvert.DeserializeObject<EdgeXAIObj>(strJSON);
+						gEdgeXAIObj = Newtonsoft.Json.JsonConvert.DeserializeObject<EdgeXAIObj>(strJSON);
 
-					    // if (gEdgeXAIObj.Readings[0].Value.Contains("objects")) {
+						if (gEdgeXAIObj.Readings[0].Value.Contains("Longitude")) {
+							greenMessage($"{gEdgeXAIObj}");
+							JObject jsonOb = JObject.Parse(gEdgeXAIObj.Readings[0].Value);
+							double lat  = (double)jsonOb["Latitude"];
+							double lon  = (double)jsonOb["Longitude"];
+							greenMessage($"Longitude:{lon}");
+							greenMessage($"Latitude: {lat}");
+							lat_lon_shift += lat_lon_shift_unit;
+							currentLat = lat + lat_lon_shift;
+							currentLon = lon + lat_lon_shift;
 					    // 	    var tmp = gEdgeXAIObj.Readings[0].Value.Replace('\"', '"');
 					    // 	    var objtmp = JsonConvert.DeserializeObject<cAIValue>(tmp);
 					    // 	    var detect_obj = objtmp.Objects[0].Roi_type;
@@ -714,11 +748,11 @@ namespace refrigerated_truck
 					    // 		    }
 					    // 		    // else {logs("We don't support this item, ignore it");}
 					    // 	    }
-					    // }
+						}
 					    // else {logs(" SMS data, skip it.");}
-				    }
+				    // }
 				    // else {logs("useless data skip it.");}
-			    }
+			    // }
 			    // else {logs("shouldn't be here!!!");}
 			    /*
 			      tbStatusReport.Text = "ID : " + gEdgeXAIObj[0].ID + "\r\n" +
@@ -741,7 +775,7 @@ namespace refrigerated_truck
 
 	    static void LaunchMQTT() {
 		    try {
-			    // logs("LaunchMQTT");
+			    greenMessage("LaunchMQTT");
 			    EdgeXAIclient = new MqttClient(MqttBrokerIP);
 			    //EdgeXAIclient = new MqttClient(IPAddress.Parse("127.0.0.1"));
 			    EdgeXAIclient.MqttMsgPublishReceived += EdgeXAIclient_MqttMsgPublishReceived;
