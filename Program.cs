@@ -661,7 +661,7 @@ namespace refrigerated_truck
 
             // Send the telemetry message.
             await s_deviceClient.SendEventAsync(telemetryMessage);
-            greenMessage($"Telemetry sent {DateTime.Now.ToShortTimeString()}");
+            greenMessage($"Telemetry sent {DateTime.Now.ToLongTimeString()}");
 
             await Task.Delay(intervalInMilliseconds);
         }
