@@ -718,11 +718,11 @@ namespace refrigerated_truck
 					JObject jsonOb = JObject.Parse(gEdgeXAIObj.Readings[0].Value);
 					double lat  = (double)jsonOb["Latitude"];
 					double lon  = (double)jsonOb["Longitude"];
-					greenMessage($"Longitude:{lon}");
-					greenMessage($"Latitude: {lat}");
 					lat_lon_shift += lat_lon_shift_unit;
 					currentLat = lat + lat_lon_shift;
 					currentLon = lon + lat_lon_shift;
+					redMessage($"Current Longitude = {lon} + {lat_lon_shift} = {currentLon}");
+					redMessage($"Current Latitude  = {lat} + {lat_lon_shift} = {currentLat}");
 				}
 				else {
 					redMessage("Skip it.");
