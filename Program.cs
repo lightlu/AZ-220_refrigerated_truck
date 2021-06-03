@@ -62,7 +62,7 @@ namespace refrigerated_truck
         static AzureMapsServices azureMapsServices;
 
         // Telemetry globals.
-        const int intervalInMilliseconds = 5000;        // Time interval required by wait function.
+        const int intervalInMilliseconds = 30000;        // Time interval required by wait function.
 
         // Refrigerated truck globals.
         static int truckNum = 1;
